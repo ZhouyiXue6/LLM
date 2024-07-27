@@ -28,7 +28,6 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.schema import AIMessage, HumanMessage
-import fitz  # PyMuPDF
 import logging
 import concurrent.futures
 from PyPDF2 import PdfReader
@@ -201,7 +200,7 @@ def main():
     if "conversation" not in st.session_state or "vectorstore" not in st.session_state:
         st.header("Chat with multiple PDFs :books:")
         
-        pdf_directory = "/Users/zhouyixue/Desktop/global_ai/b"
+        pdf_directory = "."
         pdf_docs = [os.path.join(pdf_directory, file) for file in os.listdir(pdf_directory) if file.endswith(".pdf")]
         
         if pdf_docs:
