@@ -1,4 +1,3 @@
-
 bot_template = """
     <div class="chat-message bot">
         <div class="avatar">
@@ -35,7 +34,7 @@ from PyPDF2 import PdfReader
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-openai_api_key = "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"
+
 def get_pdf_text(pdf_docs):
     start = time.time()
     text = ""
@@ -70,6 +69,11 @@ def get_vectorstore(text_chunks):
         return None
 
     start = time.time()
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        logger.error("OpenAI API key not found in environment variables.")
+        st.error("OpenAI API key not found. Please check your environment variables.")
+        return None
     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     end = time.time()
@@ -82,6 +86,11 @@ def get_conversation_chain(vectorstore):
         return None
 
     start = time.time()
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        logger.error("OpenAI API key not found in environment variables.")
+        st.error("OpenAI API key not found. Please check your environment variables.")
+        return None
     llm = ChatOpenAI(api_key=openai_api_key, model_name="gpt-4")
     memory = ConversationBufferMemory(
         memory_key='chat_history', return_messages=True)
@@ -143,6 +152,7 @@ def log_time_to_file(start_time, end_time_setup, end_time):
     st.write(f"Total execution time: {total_time:.2f} seconds")
 
 def main():
+    load_dotenv('_env')  # Explicitly load the _env file
     st.set_page_config(page_title="Chat with multiple PDFs", page_icon=":books:")
     
     css = """
@@ -237,5 +247,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
