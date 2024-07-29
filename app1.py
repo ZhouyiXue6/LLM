@@ -173,21 +173,21 @@ def main():
         max-width: 78px;
         max-height: 78px;
         border-radius: 50%;
-        object-fit: cover.
+        object-fit: cover;
     }
     .chat-message .message {
         width: 80%;
         padding: 0 1.5rem;
-        color: #fff.
+        color: #fff;
     }
     .stTextInput > div > div > input {
         width: calc(100% - 100px);
-        display: inline-block.
+        display: inline-block;
     }
     .stButton > button {
         display: inline-block;
         margin-left: 10px;
-        vertical-align: top.
+        vertical-align: top;
     }
     </style>
     """
