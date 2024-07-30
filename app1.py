@@ -1,3 +1,38 @@
+import streamlit as st
+from PyPDF2 import PdfReader
+from dotenv import load_dotenv
+import os
+import time
+import csv
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.schema import AIMessage, HumanMessage
+import fitz  # PyMuPDF
+#import pdfplumber
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def extract_text_from_pdf(pdf_path):
+    start = time.time()
+    pdf_document = fitz.open(pdf_path)  # Open file directly using the file path
+    text = ""
+    for page_num in range(pdf_document.page_count):
+        page = pdf_document.load_page(page_num)
+        text += page.get_text("text")
+    end = time.time()
+    logger.info(f"Extract text from PDF: {end - start:.2f} seconds")
+    return text
+
+
+
 bot_template = """
     <div class="chat-message bot">
         <div class="avatar">
@@ -15,39 +50,13 @@ user_template = """
         <div class="message">{{MSG}}</div>
     </div>
 """
-import streamlit as st
-from dotenv import load_dotenv
-import os
-import time
-import csv
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.schema import AIMessage, HumanMessage
-import logging
-import concurrent.futures
-from PyPDF2 import PdfReader
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
 def get_pdf_text(pdf_docs):
     start = time.time()
     text = ""
     for pdf in pdf_docs:
-        pdf_reader = PdfReader(pdf)
-        for page_number, page in enumerate(pdf_reader.pages):
-            page_text = page.extract_text()
-            if page_text is not None:
-                text += page_text
-            else:
-                st.write(f"Warning: No text extracted from page {page_number} in {pdf}")
+        text += extract_text_from_pdf(pdf)
     end = time.time()
-    logger.info(f"Get text chunks: {end - start:.2f} seconds")
+    logger.info(f"Get PDF text: {end - start:.2f} seconds")
     return text
 
 def get_text_chunks(text):
@@ -64,10 +73,6 @@ def get_text_chunks(text):
     return chunks
 
 def get_vectorstore(text_chunks):
-    if not text_chunks:
-        logger.error("No text chunks generated.")
-        return None
-
     start = time.time()
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
@@ -81,10 +86,6 @@ def get_vectorstore(text_chunks):
     return vectorstore
 
 def get_conversation_chain(vectorstore):
-    if not vectorstore:
-        logger.error("Vector store is not available.")
-        return None
-
     start = time.time()
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
@@ -108,17 +109,22 @@ def handle_userinput(user_question):
     if "conversation" not in st.session_state:
         return
     try:
+        # Retrieve the response from the conversation
         response = st.session_state.conversation({'question': user_question})
+
+        # Initialize chat history if not already present
         if "chat_history" not in st.session_state or st.session_state.chat_history is None:
             st.session_state.chat_history = []
+
+        # Add the user question and bot response to chat history
         st.session_state.chat_history.append(HumanMessage(content=user_question))
         st.session_state.chat_history.append(AIMessage(content=response['answer']))
+
     except Exception as e:
         logger.error(f"Error during question handling: {e}")
         st.error(f"An error occurred: {e}")
     end = time.time()
     logger.info(f"Handle user input: {end - start:.2f} seconds")
-
 
 def process_input():
     user_question = st.session_state.user_question
@@ -128,15 +134,21 @@ def process_input():
         save_to_csv(user_question, latest_answer)
         st.session_state.user_question = ""
 
+
 def save_to_csv(question, answer, csv_file_path='responses.csv'):
     start = time.time()
-    responses_directory = 'responses'
-    os.makedirs(responses_directory, exist_ok=True)
-    csv_file_path = os.path.join(responses_directory, csv_file_path)
+    csv_file_created = False
+    if not csv_file_created:
+        responses_directory = 'responses'
+        os.makedirs(responses_directory, exist_ok=True)
+        csv_file_path = os.path.join(responses_directory, csv_file_path)
+        with open(csv_file_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            if os.path.getsize(csv_file_path) == 0:
+                writer.writerow(['Question', 'Answer'])
+        csv_file_created = True
     with open(csv_file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-        if os.path.getsize(csv_file_path) == 0:
-            writer.writerow(['Question', 'Answer'])
         writer.writerow([question, answer])
     end = time.time()
     logger.info(f"Save to CSV: {end - start:.2f} seconds")
@@ -151,10 +163,13 @@ def log_time_to_file(start_time, end_time_setup, end_time):
     st.write(f"Setup time: {setup_time:.2f} seconds")
     st.write(f"Total execution time: {total_time:.2f} seconds")
 
+
+
 def main():
     load_dotenv('_env')  # Explicitly load the _env file
     st.set_page_config(page_title="Chat with multiple PDFs", page_icon=":books:")
     
+    # Load custom CSS from htmlTemplates.py or directly define it here
     css = """
     <style>
     .chat-message {
@@ -182,12 +197,12 @@ def main():
     }
     .stTextInput > div > div > input {
         width: calc(100% - 100px);
-        display: inline-block;
+        display: inline-block.
     }
     .stButton > button {
         display: inline-block;
         margin-left: 10px;
-        vertical-align: top;
+        vertical-align: top.
     }
     </style>
     """
@@ -196,16 +211,26 @@ def main():
 
     start_time = time.time()
 
+    # Initialize time logs if not already in session state
+    if 'time_logs' not in st.session_state:
+        st.session_state.time_logs = {}
+
     if "conversation" not in st.session_state or "vectorstore" not in st.session_state:
         st.header("Chat with multiple PDFs :books:")
         
-        pdf_directory = "."
+        # Read PDF files from a directory
+        pdf_directory = "/Users/zhouyixue/Desktop/global_ai/a"
         pdf_docs = [os.path.join(pdf_directory, file) for file in os.listdir(pdf_directory) if file.endswith(".pdf")]
         
+        step_start_time = time.time()
         if pdf_docs:
             raw_text = get_pdf_text(pdf_docs)
             text_chunks = get_text_chunks(raw_text)
             
+            step_end_time = time.time()
+            logger.info(f"Process PDFs: {step_end_time - step_start_time:.2f} seconds")
+            
+            step_start_time = time.time()
             if "vectorstore" not in st.session_state:
                 vectorstore = get_vectorstore(text_chunks)
                 if vectorstore is None:
@@ -213,11 +238,16 @@ def main():
                 st.session_state.vectorstore = vectorstore
             else:
                 vectorstore = st.session_state.vectorstore
+            step_end_time = time.time()
+            logger.info(f"Update vector store: {step_end_time - step_start_time:.2f} seconds")
 
+            step_start_time = time.time()
             conversation_chain = get_conversation_chain(vectorstore)
             if conversation_chain is None:
                 return
             st.session_state.conversation = conversation_chain
+            step_end_time = time.time()
+            logger.info(f"Setup conversation chain: {step_end_time - step_start_time:.2f} seconds")
     else:
         st.header("Chat with multiple PDFs :books:")
 
@@ -226,8 +256,10 @@ def main():
 
     end_time_setup = time.time()
 
+    # Use the callback to process input when Enter is pressed
     st.text_input("Ask a question about your documents:", key="user_question", on_change=process_input)
 
+    # Display the chat history
     if st.session_state.chat_history:
         latest_message = st.session_state.chat_history[-2:]
         for message in latest_message:
@@ -236,6 +268,7 @@ def main():
             elif isinstance(message, AIMessage):
                 st.write(bot_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
 
+    # Display the previous chat history below
     for message in st.session_state.chat_history[:-2]:
         if isinstance(message, HumanMessage):
             st.write(user_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
@@ -245,8 +278,12 @@ def main():
     end_time = time.time()
     log_time_to_file(start_time, end_time_setup, end_time)
 
+    # Display time logs
+    for step, duration in st.session_state.time_logs.items():
+        st.write(f"Step: {step}, Duration: {duration}")
+        
+        
 if __name__ == '__main__':
     main()
-
 
 
