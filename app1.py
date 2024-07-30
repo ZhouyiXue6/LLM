@@ -21,10 +21,8 @@ user_template = """
 import streamlit as st
 from dotenv import load_dotenv
 import os
-import time
 import pickle
 import requests
-from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
