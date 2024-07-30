@@ -219,7 +219,7 @@ def main():
         st.header("Chat with multiple PDFs :books:")
         
         # Read PDF files from a directory
-        pdf_directory = "/Users/zhouyixue/Desktop/global_ai/a"
+        pdf_directory = "."
         pdf_docs = [os.path.join(pdf_directory, file) for file in os.listdir(pdf_directory) if file.endswith(".pdf")]
         
         step_start_time = time.time()
