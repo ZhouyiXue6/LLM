@@ -12,3 +12,5 @@ PyMuPDF
 boto3
 openai
 tiktoken==0.4.0
+sentence-transformers
+gdown
