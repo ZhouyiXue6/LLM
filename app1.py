@@ -41,7 +41,7 @@ def download_from_url(url, local_path):
 def load_vectorstore():
     vectorstore_path = "vectorstore.pkl"
     if not os.path.exists(vectorstore_path):
-        download_from_url("https://www.dropbox.com/scl/fi/3wsumze0eh8l5483j0ggi/vectorstore.pkl?rlkey=bgebfapbkj37h6gdewkcjwrgs&st=obfc82dz&dl=0", vectorstore_path)
+        download_from_url("https://www.dropbox.com/scl/fi/3wsumze0eh8l5483j0ggi/vectorstore.pkl?rlkey=bgebfapbkj37h6gdewkcjwrgs&st=obfc82dz&dl=1", vectorstore_path)
     with open(vectorstore_path, 'rb') as f:
         vectorstore = pickle.load(f)
     return vectorstore
