@@ -40,13 +40,19 @@ user_template = """
 
 def download_files_from_gdrive():
     files_to_download = {
-        "vectorstore_path": "https://drive.google.com/uc?id=1iquuMdxga8SxwPTF5a8YZ-UPcGJAoHRf",
-        "text_chunks_path": "https://drive.google.com/uc?id=1r0aQMav2IH1XbctzvLpFQxppM5xMUZif",
-        "file_list_path": "https://drive.google.com/uc?id=15WhCoDNLmtSzcocosfFeunspCU5cDDLb"
+        "vectorstore3.pkl": "https://drive.google.com/uc?id=1iquuMdxga8SxwPTF5a8YZ-UPcGJAoHRf",
+        "text_chunks.pkl": "https://drive.google.com/uc?id=1r0aQMav2IH1XbctzvLpFQxppM5xMUZif",
+        "file_list.txt": "https://drive.google.com/uc?id=15WhCoDNLmtSzcocosfFeunspCU5cDDLb"
     }
 
-    for path, url in files_to_download.items():
-        gdown.download(url, path, quiet=False, fuzzy=True)
+    for filename, url in files_to_download.items():
+        if not os.path.exists(filename):
+            logger.info(f"Downloading {filename} from {url}")
+            gdown.download(url, filename, quiet=False, fuzzy=True)
+            if not os.path.exists(filename):
+                logger.error(f"Failed to download {filename} from {url}")
+            else:
+                logger.info(f"Successfully downloaded {filename}")
 
 @st.cache_resource
 def load_vectorstore():
@@ -54,8 +60,9 @@ def load_vectorstore():
     text_chunks_path = "text_chunks.pkl"
     file_list_path = "file_list.txt"
     
-    if not all(os.path.exists(path) for path in [vectorstore_path, text_chunks_path, file_list_path]):
-        st.error("One or more necessary files are missing.")
+    missing_files = [path for path in [vectorstore_path, text_chunks_path, file_list_path] if not os.path.exists(path)]
+    if missing_files:
+        st.error(f"One or more necessary files are missing: {', '.join(missing_files)}")
         return None
     
     try:
